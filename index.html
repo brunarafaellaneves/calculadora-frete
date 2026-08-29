@@ -1,0 +1,220 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wild Flower Store | Calculadora de Frete</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <main class="container">
+
+        <header class="header">
+
+            <!-- Quando tivermos sua logo, vamos colocar a imagem aqui -->
+            <div class="logo-area">
+                <div class="logo-placeholder">
+                    WILD FLOWER
+                </div>
+            </div>
+
+            <h1>Wild Flower Store</h1>
+            <p class="subtitle">Calculadora de Frete</p>
+
+        </header>
+
+
+        <div class="aviso">
+            <strong>Antes de calcular o frete</strong>
+
+            <p>
+                O valor do frete é calculado automaticamente com base no CEP
+                informado e na quantidade de leques.
+            </p>
+
+            <p>
+                Caso o valor fique acima do esperado, entre em contato conosco
+                pela <strong>DM</strong>. Podemos tentar encontrar uma outra
+                solução de envio para o seu pedido.
+            </p>
+        </div>
+
+
+        <section class="calculadora">
+
+            <h2>Calcule seu frete</h2>
+
+            <label for="cep">CEP de destino</label>
+
+            <input
+                type="text"
+                id="cep"
+                placeholder="00000-000"
+                maxlength="9"
+            >
+
+
+            <label for="quantidade">Quantidade de leques</label>
+
+            <select id="quantidade">
+
+                <option value="1">1 leque</option>
+                <option value="2">2 leques</option>
+                <option value="3">3 leques</option>
+                <option value="4">4 leques</option>
+                <option value="5">5 leques</option>
+
+            </select>
+
+
+            <button id="calcular">
+                CALCULAR FRETE
+            </button>
+
+
+            <div id="resultado"></div>
+
+        </section>
+
+
+        <footer>
+            <p>Wild Flower Store</p>
+        </footer>
+
+    </main>
+
+
+    <script>
+
+        const cepInput = document.getElementById("cep");
+
+
+        cepInput.addEventListener("input", function () {
+
+            let cep = this.value.replace(/\D/g, "");
+
+            if (cep.length > 5) {
+                cep = cep.substring(0, 5) + "-" + cep.substring(5, 8);
+            }
+
+            this.value = cep;
+
+        });
+
+
+        document.getElementById("calcular").addEventListener("click", async function () {
+
+            const cep = cepInput.value.replace(/\D/g, "");
+
+            const quantidade = Number(
+                document.getElementById("quantidade").value
+            );
+
+            const resultado = document.getElementById("resultado");
+
+
+            if (cep.length !== 8) {
+
+                resultado.innerHTML = `
+                    <p class="erro">
+                        Digite um CEP válido.
+                    </p>
+                `;
+
+                return;
+            }
+
+
+            resultado.innerHTML = `
+                <p class="carregando">
+                    Calculando o frete...
+                </p>
+            `;
+
+
+            try {
+
+                const resposta = await fetch("/api/calcular-frete", {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        cepDestino: cep,
+                        quantidade: quantidade
+                    })
+
+                });
+
+
+                const dados = await resposta.json();
+
+
+                if (!resposta.ok) {
+
+                    throw new Error(
+                        dados.erro || "Não foi possível calcular o frete."
+                    );
+
+                }
+
+
+                resultado.innerHTML = `
+
+                    <div class="frete">
+
+                        <h2>Opções de envio</h2>
+
+                        ${
+                            dados.opcoes.map(opcao => `
+
+                                <div class="opcao">
+
+                                    <div>
+                                        <strong>${opcao.nome}</strong>
+
+                                        <small>
+                                            Prazo estimado:
+                                            ${opcao.prazo} dias úteis
+                                        </small>
+                                    </div>
+
+                                    <span>
+                                        R$ ${opcao.preco}
+                                    </span>
+
+                                </div>
+
+                            `).join("")
+                        }
+
+                    </div>
+
+                `;
+
+
+            } catch (erro) {
+
+                resultado.innerHTML = `
+
+                    <p class="erro">
+                        ${erro.message}
+                    </p>
+
+                `;
+
+            }
+
+        });
+
+    </script>
+
+</body>
+</html>
+```
