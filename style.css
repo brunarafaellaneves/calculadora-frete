@@ -29,24 +29,11 @@ body {
     margin-bottom: 15px;
 }
 
-.logo-placeholder {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 100px;
-    height: 100px;
-
+.logo {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
     border-radius: 50%;
-
-    background: white;
-    border: 3px solid #3030a0;
-
-    color: #3030a0;
-
-    font-size: 13px;
-    font-weight: bold;
-    letter-spacing: 1px;
 }
 
 .header h1 {
