@@ -1,217 +1,587 @@
 ```html
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
     <title>Wild Flower Store | Calculadora de Frete</title>
-    <link rel="stylesheet" href="style.css">
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
 </head>
+
 
 <body>
 
     <main class="container">
 
+
+        <!-- ==============================
+             CABEÇALHO
+        =============================== -->
+
         <header class="header">
 
             <div class="logo-area">
-                <img src="logo.jpg" alt="Wild Flower Store" class="logo">
+
+                <img
+                    src="logo.jpg"
+                    alt="Wild Flower Store"
+                    class="logo"
+                >
+
             </div>
 
-            <h1>Wild Flower Store</h1>
-            <p class="subtitle">Calculadora de Frete</p>
+
+            <h1>
+                Wild Flower Store
+            </h1>
+
+
+            <p class="subtitle">
+                Calculadora de Frete
+            </p>
 
         </header>
 
 
+
+        <!-- ==============================
+             AVISO
+        =============================== -->
+
         <div class="aviso">
-            <strong>Antes de calcular o frete</strong>
+
+            <strong>
+                Antes de calcular o frete
+            </strong>
+
 
             <p>
-                O valor do frete é calculado automaticamente com base no CEP
-                informado e na quantidade de leques.
+                O valor do frete é calculado automaticamente
+                com base no CEP informado e na quantidade
+                de leques.
             </p>
 
+
             <p>
-                Caso o valor fique acima do esperado, entre em contato conosco
-                pela <strong>DM</strong>. Podemos tentar encontrar uma outra
+                Caso o valor fique acima do esperado,
+                entre em contato conosco pela
+                <strong>DM</strong>.
+                Podemos tentar encontrar uma outra
                 solução de envio para o seu pedido.
             </p>
+
         </div>
 
 
+
+        <!-- ==============================
+             UBER FLASH
+        =============================== -->
+
+        <div class="aviso uber">
+
+            <strong>
+                É de Recife ou região?
+            </strong>
+
+
+            <p>
+                Também podemos fazer o envio por
+                <strong>Uber Flash</strong>.
+            </p>
+
+
+            <p>
+                Se tiver interesse, entre em contato
+                conosco pela <strong>DM</strong> para
+                fazermos um orçamento.
+            </p>
+
+        </div>
+
+
+
+        <!-- ==============================
+             CALCULADORA
+        =============================== -->
+
         <section class="calculadora">
 
-            <h2>Calcule seu frete</h2>
+            <h2>
+                Calcule seu frete
+            </h2>
 
-            <label for="cep">CEP de destino</label>
+
+            <!-- CEP -->
+
+            <label for="cep">
+                CEP de destino
+            </label>
+
 
             <input
                 type="text"
                 id="cep"
                 placeholder="00000-000"
                 maxlength="9"
+                inputmode="numeric"
+                autocomplete="postal-code"
             >
 
 
-            <label for="quantidade">Quantidade de leques</label>
+
+            <!-- QUANTIDADE -->
+
+            <label for="quantidade">
+                Quantidade de leques
+            </label>
+
 
             <select id="quantidade">
 
-                <option value="1">1 leque</option>
-                <option value="2">2 leques</option>
-                <option value="3">3 leques</option>
-                <option value="4">4 leques</option>
-                <option value="5">5 leques</option>
+                <option value="1">
+                    1 leque
+                </option>
+
+                <option value="2">
+                    2 leques
+                </option>
+
+                <option value="3">
+                    3 leques
+                </option>
+
+                <option value="4">
+                    4 leques
+                </option>
+
+                <option value="5">
+                    5 leques
+                </option>
 
             </select>
 
 
-            <button id="calcular">
+
+            <!-- BOTÃO -->
+
+            <button
+                id="calcular"
+                type="button"
+            >
                 CALCULAR FRETE
             </button>
 
+
+
+            <!-- RESULTADO -->
 
             <div id="resultado"></div>
 
         </section>
 
 
+
+        <!-- ==============================
+             RODAPÉ
+        =============================== -->
+
         <footer>
-            <p>Wild Flower Store</p>
+
+            <p>
+                Wild Flower Store
+            </p>
+
         </footer>
+
 
     </main>
 
 
+
     <script>
 
-        const cepInput = document.getElementById("cep");
+        // ==========================================
+        // ELEMENTOS
+        // ==========================================
+
+        const cepInput =
+            document.getElementById("cep");
+
+        const quantidadeInput =
+            document.getElementById("quantidade");
+
+        const calcularButton =
+            document.getElementById("calcular");
+
+        const resultado =
+            document.getElementById("resultado");
 
 
-        cepInput.addEventListener("input", function () {
 
-            let cep = this.value.replace(/\D/g, "");
+        // ==========================================
+        // FORMATAÇÃO DO CEP
+        // ==========================================
 
-            if (cep.length > 5) {
-                cep = cep.substring(0, 5) + "-" + cep.substring(5, 8);
-            }
+        cepInput.addEventListener(
+            "input",
+            function () {
 
-            this.value = cep;
-
-        });
-
-
-        document.getElementById("calcular").addEventListener("click", async function () {
-
-            const cep = cepInput.value.replace(/\D/g, "");
-
-            const quantidade = Number(
-                document.getElementById("quantidade").value
-            );
-
-            const resultado = document.getElementById("resultado");
+                let cep =
+                    this.value.replace(/\D/g, "");
 
 
-            if (cep.length !== 8) {
-
-                resultado.innerHTML = `
-                    <p class="erro">
-                        Digite um CEP válido.
-                    </p>
-                `;
-
-                return;
-            }
+                // Limita a 8 números
+                cep =
+                    cep.substring(0, 8);
 
 
-            resultado.innerHTML = `
-                <p class="carregando">
-                    Calculando o frete...
-                </p>
-            `;
+                // Adiciona hífen
+                if (cep.length > 5) {
 
-
-            try {
-
-                const resposta = await fetch("/api/calcular-frete", {
-
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        cepDestino: cep,
-                        quantidade: quantidade
-                    })
-
-                });
-
-
-                const dados = await resposta.json();
-
-
-                if (!resposta.ok) {
-
-                    throw new Error(
-                        dados.erro || "Não foi possível calcular o frete."
-                    );
+                    cep =
+                        cep.substring(0, 5)
+                        + "-"
+                        + cep.substring(5);
 
                 }
 
 
+                this.value = cep;
+
+            }
+        );
+
+
+
+        // ==========================================
+        // CALCULAR FRETE
+        // ==========================================
+
+        calcularButton.addEventListener(
+            "click",
+            async function () {
+
+
+                // ------------------------------
+                // CEP
+                // ------------------------------
+
+                const cep =
+                    cepInput.value.replace(
+                        /\D/g,
+                        ""
+                    );
+
+
+                // ------------------------------
+                // QUANTIDADE
+                // ------------------------------
+
+                const quantidade =
+                    Number(
+                        quantidadeInput.value
+                    );
+
+
+
+                // ------------------------------
+                // VALIDAR CEP
+                // ------------------------------
+
+                if (cep.length !== 8) {
+
+                    resultado.innerHTML = `
+
+                        <p class="erro">
+                            Digite um CEP válido.
+                        </p>
+
+                    `;
+
+                    return;
+                }
+
+
+
+                // ------------------------------
+                // LOADING
+                // ------------------------------
+
+                calcularButton.disabled = true;
+
+                calcularButton.innerText =
+                    "CALCULANDO...";
+
+
                 resultado.innerHTML = `
 
-                    <div class="frete">
-
-                        <h2>Opções de envio</h2>
-
-                        ${
-                            dados.opcoes.map(opcao => `
-
-                                <div class="opcao">
-
-                                    <div>
-                                        <strong>${opcao.nome}</strong>
-
-                                        <small>
-                                            Prazo estimado:
-                                            ${opcao.prazo} dias úteis
-                                        </small>
-                                    </div>
-
-                                    <span>
-                                        R$ ${opcao.preco}
-                                    </span>
-
-                                </div>
-
-                            `).join("")
-                        }
-
-                    </div>
-
-                `;
-
-
-            } catch (erro) {
-
-                resultado.innerHTML = `
-
-                    <p class="erro">
-                        ${erro.message}
+                    <p class="carregando">
+                        Calculando o frete...
                     </p>
 
                 `;
 
-            }
 
-        });
+
+                try {
+
+
+                    // ==================================
+                    // CHAMADA PARA O BACKEND
+                    // ==================================
+
+                    const resposta =
+                        await fetch(
+                            "/api/calcular-frete",
+                            {
+
+                                method: "POST",
+
+                                headers: {
+
+                                    "Content-Type":
+                                        "application/json",
+
+                                    "Accept":
+                                        "application/json"
+
+                                },
+
+                                body:
+                                    JSON.stringify({
+
+                                        cepDestino:
+                                            cep,
+
+                                        quantidade:
+                                            quantidade
+
+                                    })
+
+                            }
+                        );
+
+
+
+                    // ==================================
+                    // LER RESPOSTA
+                    // ==================================
+
+                    const texto =
+                        await resposta.text();
+
+
+                    let dados;
+
+
+                    try {
+
+                        dados =
+                            JSON.parse(texto);
+
+                    } catch {
+
+                        console.error(
+                            "Resposta inválida:",
+                            texto
+                        );
+
+                        throw new Error(
+                            "O servidor retornou uma resposta inválida."
+                        );
+
+                    }
+
+
+
+                    // ==================================
+                    // VERIFICAR ERRO
+                    // ==================================
+
+                    if (!resposta.ok) {
+
+                        throw new Error(
+
+                            dados.erro
+                            ||
+                            "Não foi possível calcular o frete."
+
+                        );
+
+                    }
+
+
+
+                    // ==================================
+                    // VALIDAR OPÇÕES
+                    // ==================================
+
+                    if (
+                        !dados.opcoes
+                        ||
+                        !Array.isArray(
+                            dados.opcoes
+                        )
+                        ||
+                        dados.opcoes.length === 0
+                    ) {
+
+                        throw new Error(
+                            "Nenhuma opção de frete disponível."
+                        );
+
+                    }
+
+
+
+                    // ==================================
+                    // MOSTRAR RESULTADOS
+                    // ==================================
+
+                    resultado.innerHTML = `
+
+                        <div class="frete">
+
+                            <h2>
+                                Opções de envio
+                            </h2>
+
+
+                            ${
+
+                                dados.opcoes
+                                    .map(
+                                        opcao => `
+
+                                    <div class="opcao">
+
+
+                                        <div>
+
+                                            <strong>
+                                                ${
+                                                    opcao.nome
+                                                    ||
+                                                    "Frete"
+                                                }
+                                            </strong>
+
+
+                                            <small>
+
+                                                Prazo estimado:
+                                                ${
+                                                    opcao.prazo
+                                                    ||
+                                                    "Consultar"
+                                                }
+                                                dias úteis
+
+                                            </small>
+
+
+                                            ${
+                                                opcao.transportadora
+                                                ?
+                                                `
+                                                <small>
+                                                    ${
+                                                        opcao.transportadora
+                                                    }
+                                                </small>
+                                                `
+                                                :
+                                                ""
+                                            }
+
+                                        </div>
+
+
+                                        <span>
+
+                                            R$
+                                            ${
+                                                opcao.preco
+                                            }
+
+                                        </span>
+
+
+                                    </div>
+
+                                `
+                                    )
+                                    .join("")
+
+                            }
+
+                        </div>
+
+                    `;
+
+
+                } catch (erro) {
+
+
+                    // ==================================
+                    // ERRO
+                    // ==================================
+
+                    console.error(
+                        "Erro ao calcular frete:",
+                        erro
+                    );
+
+
+                    resultado.innerHTML = `
+
+                        <p class="erro">
+
+                            ${
+                                erro.message
+                                ||
+                                "Não foi possível calcular o frete."
+                            }
+
+                        </p>
+
+                    `;
+
+
+                } finally {
+
+
+                    // ==================================
+                    // RESTAURAR BOTÃO
+                    // ==================================
+
+                    calcularButton.disabled =
+                        false;
+
+                    calcularButton.innerText =
+                        "CALCULAR FRETE";
+
+                }
+
+            }
+        );
 
     </script>
 
 </body>
+
 </html>
 ```
