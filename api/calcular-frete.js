@@ -26,7 +26,7 @@ export default async function handler(req, res) {
         const peso = quantidade * 0.15;
 
         const resposta = await fetch(
-            "https://sandbox.superfrete.com/api/v0/calculator",
+            "https://superfrete.com/api/v0/calculator",
             {
                 method: "POST",
 
