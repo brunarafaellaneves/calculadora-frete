@@ -1,29 +1,35 @@
+```javascript
 export default async function handler(req, res) {
 
-    // Aceita somente POST
+    // ==========================================
+    // 1. MÉTODO DA REQUISIÇÃO
+    // ==========================================
+
     if (req.method !== "POST") {
         return res.status(405).json({
             erro: "Método não permitido."
         });
     }
 
+
     try {
 
-        // ==============================
-        // 1. RECEBER DADOS DO SITE
-        // ==============================
+        // ==========================================
+        // 2. RECEBER DADOS
+        // ==========================================
 
         const { cepDestino, quantidade } = req.body;
 
-        // Remove tudo que não for número do CEP
-        const cep = String(cepDestino || "").replace(/\D/g, "");
+        // Remove caracteres do CEP
+        const cep = String(cepDestino || "")
+            .replace(/\D/g, "");
 
         const qtd = Number(quantidade);
 
 
-        // ==============================
-        // 2. VALIDAR CEP
-        // ==============================
+        // ==========================================
+        // 3. VALIDAR CEP
+        // ==========================================
 
         if (!cep) {
             return res.status(400).json({
@@ -38,9 +44,9 @@ export default async function handler(req, res) {
         }
 
 
-        // ==============================
-        // 3. VALIDAR QUANTIDADE
-        // ==============================
+        // ==========================================
+        // 4. VALIDAR QUANTIDADE
+        // ==========================================
 
         if (!quantidade) {
             return res.status(400).json({
@@ -55,18 +61,17 @@ export default async function handler(req, res) {
         }
 
 
-        // ==============================
-        // 4. CONFIGURAÇÃO DO PACOTE
-        // ==============================
+        // ==========================================
+        // 5. PESO DO PACOTE
+        // ==========================================
 
-        // Peso aproximado:
-        // 1 leque = 150g = 0.15kg
+        // Cada leque pesa aproximadamente 150g
         const peso = qtd * 0.15;
 
 
-        // ==============================
-        // 5. VERIFICAR TOKEN
-        // ==============================
+        // ==========================================
+        // 6. VERIFICAR TOKEN
+        // ==========================================
 
         if (!process.env.SUPERFRETE_API_KEY) {
 
@@ -80,9 +85,9 @@ export default async function handler(req, res) {
         }
 
 
-        // ==============================
-        // 6. CHAMAR API SUPERFRETE
-        // ==============================
+        // ==========================================
+        // 7. CONSULTAR SUPERFRETE
+        // ==========================================
 
         const resposta = await fetch(
             "https://api.superfrete.com/api/v0/calculator",
@@ -95,7 +100,7 @@ export default async function handler(req, res) {
                         `Bearer ${process.env.SUPERFRETE_API_KEY}`,
 
                     "User-Agent":
-                        "Leques K-Pop (integracao@superfrete.com)",
+                        "Wild Flower Store (brunarafaellaneves@gmail.com)",
 
                     "Accept":
                         "application/json",
@@ -111,15 +116,15 @@ export default async function handler(req, res) {
                         postal_code: "53150170"
                     },
 
-                    // CEP informado pelo cliente
+                    // CEP de destino
                     to: {
                         postal_code: cep
                     },
 
-                    // Serviços que queremos consultar
+                    // Serviços consultados
                     services: "1,2,17,3,33,31",
 
-                    // Opções adicionais
+                    // Opções
                     options: {
 
                         own_hand: false,
@@ -129,6 +134,7 @@ export default async function handler(req, res) {
                         insurance_value: 0,
 
                         use_insurance_value: false
+
                     },
 
                     // Dimensões da embalagem
@@ -141,27 +147,30 @@ export default async function handler(req, res) {
                         width: 8,
 
                         length: 42
+
                     }
+
                 })
             }
         );
 
 
-        // ==============================
-        // 7. LER RESPOSTA DA API
-        // ==============================
+        // ==========================================
+        // 8. LER RESPOSTA
+        // ==========================================
 
         const textoResposta =
             await resposta.text();
 
         let dados;
 
+
         try {
 
             dados =
                 JSON.parse(textoResposta);
 
-        } catch (erro) {
+        } catch {
 
             console.error(
                 "Resposta inválida da SuperFrete:",
@@ -177,16 +186,16 @@ export default async function handler(req, res) {
         }
 
 
-        // Mostra a resposta no log
+        // Log para facilitar diagnóstico
         console.log(
-            "Resposta da SuperFrete:",
+            "Resposta SuperFrete:",
             dados
         );
 
 
-        // ==============================
-        // 8. VERIFICAR ERRO DA API
-        // ==============================
+        // ==========================================
+        // 9. VERIFICAR ERRO DA API
+        // ==========================================
 
         if (!resposta.ok) {
 
@@ -207,9 +216,9 @@ export default async function handler(req, res) {
         }
 
 
-        // ==============================
-        // 9. VALIDAR FORMATO DA RESPOSTA
-        // ==============================
+        // ==========================================
+        // 10. VALIDAR RESPOSTA
+        // ==========================================
 
         if (!Array.isArray(dados)) {
 
@@ -221,65 +230,77 @@ export default async function handler(req, res) {
             return res.status(502).json({
 
                 erro:
-                    "Formato de resposta inesperado da SuperFrete.",
-
-                resposta: dados
+                    "Formato de resposta inesperado da SuperFrete."
 
             });
         }
 
 
-        // ==============================
-        // 10. FILTRAR FRETES VÁLIDOS
-        // ==============================
+        // ==========================================
+        // 11. CRIAR OPÇÕES DE FRETE
+        // ==========================================
 
         const opcoes = dados
 
-            .filter(opcao => {
+            .filter(opcao =>
 
-                return (
+                opcao &&
 
-                    opcao &&
+                opcao.price !== null &&
 
-                    opcao.price !== null &&
+                opcao.price !== undefined &&
 
-                    opcao.price !== undefined &&
+                Number(opcao.price) > 0 &&
 
-                    Number(opcao.price) > 0 &&
+                !opcao.has_error
 
-                    !opcao.has_error
+            )
 
-                );
+            .map(opcao => ({
 
-            })
+                nome:
+                    opcao.name ||
+                    "Frete",
 
-            .map(opcao => {
+                preco:
+                    Number(opcao.price)
+                        .toFixed(2)
+                        .replace(".", ","),
 
-                return {
+                prazo:
+                    opcao.delivery_time,
 
-                    nome:
-                        opcao.name ||
-                        "Frete",
+                transportadora:
+                    opcao.company?.name ||
+                    ""
 
-                    preco:
-                        Number(opcao.price)
-                            .toFixed(2)
-                            .replace(".", ","),
+            }))
 
-                    prazo:
-                        opcao.delivery_time,
 
-                    transportadora:
-                        opcao.company?.name ||
-                        ""
-                };
+            // ==========================================
+            // 12. ORDENAR DO MAIS BARATO AO MAIS CARO
+            // ==========================================
+
+            .sort((a, b) => {
+
+                const precoA =
+                    Number(
+                        a.preco.replace(",", ".")
+                    );
+
+                const precoB =
+                    Number(
+                        b.preco.replace(",", ".")
+                    );
+
+                return precoA - precoB;
 
             });
 
 
-        // ==============================
-        // 11. NENHUM FRETE DISPONÍVEL
-        // ==============================
+        // ==========================================
+        // 13. NENHUMA OPÇÃO
+        // ==========================================
 
         if (opcoes.length === 0) {
 
@@ -292,9 +313,9 @@ export default async function handler(req, res) {
         }
 
 
-        // ==============================
-        // 12. RETORNAR FRETES PARA O SITE
-        // ==============================
+        // ==========================================
+        // 14. RETORNAR RESULTADO
+        // ==========================================
 
         return res.status(200).json({
 
@@ -305,9 +326,9 @@ export default async function handler(req, res) {
 
     } catch (erro) {
 
-        // ==============================
-        // 13. ERRO INESPERADO
-        // ==============================
+        // ==========================================
+        // 15. ERRO GERAL
+        // ==========================================
 
         console.error(
             "Erro no cálculo do frete:",
@@ -324,5 +345,8 @@ export default async function handler(req, res) {
                 "Erro desconhecido."
 
         });
+
     }
+
 }
+```
