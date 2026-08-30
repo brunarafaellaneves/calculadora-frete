@@ -85,9 +85,10 @@ export default async function handler(req, res) {
     } catch (erro) {
 
         console.error("Erro:", erro);
-
+    
         return res.status(500).json({
-            erro: "Não foi possível calcular o frete."
+            erro: erro.message || "Erro desconhecido",
+            detalhe: String(erro)
         });
     }
 }
