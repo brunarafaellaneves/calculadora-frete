@@ -71,9 +71,9 @@ export default async function handler(req, res) {
         if (!resposta.ok) {
 
             return res.status(resposta.status).json({
-                erro: "Não foi possível calcular o frete."
+                erro: dados.message || dados.error || JSON.stringify(dados)
             });
-
+        
         }
 
         // Remove serviços que apresentarem erro ou não tiverem preço
