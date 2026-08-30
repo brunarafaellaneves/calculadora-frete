@@ -53,7 +53,10 @@ export default async function handler(req, res) {
         );
 
         const dados = await resposta.json();
-        console.log("RESPOSTA COMPLETA SUPERFRETE:", JSON.stringify(dados));
+        return res.status(200).json({
+            debug: true,
+            dados: dados
+        });
 
         console.log("Resposta SuperFrete:", resposta.status, dados);
 
