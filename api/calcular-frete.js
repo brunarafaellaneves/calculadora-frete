@@ -85,7 +85,7 @@ export default async function handler(req, res) {
         // ==============================
 
         const resposta = await fetch(
-            "https://sandbox.superfrete.com/api/v0/calculator",
+            "https://api.superfrete.com/api/v0/calculator",
             {
                 method: "POST",
 
