@@ -63,17 +63,19 @@ export default async function handler(req, res) {
             });
         }
 
-        const opcoes = Array.isArray(dados)
+        const resultados = Array.isArray(dados)
             ? dados
-                .filter(opcao => opcao.price)
-                .map(opcao => ({
-                    nome: opcao.name,
-                    preco: Number(opcao.price)
-                        .toFixed(2)
-                        .replace(".", ","),
-                    prazo: opcao.delivery_time
-                }))
             : [];
+        
+        const opcoes = resultados
+            .filter(opcao => !opcao.has_error && opcao.price !== null && opcao.price !== undefined)
+            .map(opcao => ({
+                nome: opcao.name,
+                preco: Number(opcao.price)
+                    .toFixed(2)
+                    .replace(".", ","),
+                prazo: opcao.delivery_time
+            }));
 
         if (opcoes.length === 0) {
             return res.status(404).json({
