@@ -1,4 +1,5 @@
 export default async function handler(req, res) {
+
     if (req.method !== "POST") {
         return res.status(405).json({
             erro: "Método não permitido."
@@ -6,6 +7,7 @@ export default async function handler(req, res) {
     }
 
     try {
+
         const { cepDestino, quantidade } = req.body;
 
         if (!cepDestino || !quantidade) {
@@ -24,79 +26,99 @@ export default async function handler(req, res) {
         const peso = quantidade * 0.15;
 
         const resposta = await fetch(
-            "https://api.superfrete.com/api/v0/calculator",
+            "https://sandbox.superfrete.com/api/v0/calculator",
             {
                 method: "POST",
 
                 headers: {
-                    "Authorization": `Bearer ${process.env.SUPERFRETE_API_KEY}`,
-                    "User-Agent": "Wild Flower Store (contato)",
-                    "Accept": "application/json",
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${process.env.SUPERFRETE_API_KEY}`
                 },
 
                 body: JSON.stringify({
+
                     from: {
                         postal_code: "53150170"
                     },
+
                     to: {
                         postal_code: cepDestino
                     },
+
+                    // Todas as opções que queremos consultar
+                    services: "1,2,17,3,33,31",
+
+                    options: {
+                        own_hand: false,
+                        receipt: false,
+                        insurance_value: 0,
+                        use_insurance_value: false
+                    },
+
                     package: {
                         weight: peso,
-                        width: 8,
                         height: 8,
+                        width: 8,
                         length: 42
                     }
+
                 })
             }
         );
 
         const dados = await resposta.json();
-        return res.status(200).json({
-            debug: true,
-            dados: dados
-        });
-
-        console.log("Resposta SuperFrete:", resposta.status, dados);
 
         if (!resposta.ok) {
+
             return res.status(resposta.status).json({
-                erro: "Erro na SuperFrete.",
-                detalhe: dados
+                erro: "Não foi possível calcular o frete."
             });
+
         }
 
-        const resultados = Array.isArray(dados)
-            ? dados
-            : [];
-        
-        const opcoes = resultados
-            .filter(opcao => !opcao.has_error && opcao.price !== null && opcao.price !== undefined)
+        // Remove serviços que apresentarem erro ou não tiverem preço
+        const opcoes = dados
+            .filter(opcao =>
+                opcao.price &&
+                !opcao.has_error
+            )
             .map(opcao => ({
+
                 nome: opcao.name,
+
                 preco: Number(opcao.price)
                     .toFixed(2)
                     .replace(".", ","),
-                prazo: opcao.delivery_time
+
+                prazo: opcao.delivery_time,
+
+                transportadora: opcao.company?.name || ""
+
             }));
 
+
         if (opcoes.length === 0) {
+
             return res.status(404).json({
-                erro: "Nenhuma opção de frete encontrada para este CEP."
+                erro: "Nenhuma opção de frete disponível para este CEP."
             });
+
         }
+
 
         return res.status(200).json({
             opcoes
         });
 
+
     } catch (erro) {
 
-        console.error("Erro:", erro);
+        console.error(erro);
 
         return res.status(500).json({
-            erro: erro.message || "Não foi possível calcular o frete."
+            erro: "Não foi possível calcular o frete."
         });
+
     }
+
 }
