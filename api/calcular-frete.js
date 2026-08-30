@@ -32,10 +32,17 @@ export default async function handler(req, res) {
                 method: "POST",
 
                 headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${process.env.SUPERFRETE_API_KEY}`,
-                    "User-Agent": "Wild Flower Store (SEU_EMAIL_AQUI)",
-                    "Accept": "application/json"
+                    "Authorization":
+                        `Bearer ${process.env.SUPERFRETE_API_KEY}`,
+
+                    "User-Agent":
+                        "Wild Flower Store (brunarafaellaneves@gmail.com)",
+
+                    "Accept":
+                        "application/json",
+
+                    "Content-Type":
+                        "application/json"
                 },
 
                 body: JSON.stringify({
@@ -68,19 +75,26 @@ export default async function handler(req, res) {
             }
         );
 
+
         const dados = await resposta.json();
+
 
         if (!resposta.ok) {
 
             return res.status(resposta.status).json({
-                erro: dados.message ||
-                      dados.error ||
-                      JSON.stringify(dados)
+                erro:
+                    dados.message ||
+                    dados.error ||
+                    JSON.stringify(dados)
             });
 
         }
 
-        // Remove serviços que apresentarem erro ou não tiverem preço
+
+        // ==========================================
+        // FILTRAR E ORDENAR
+        // ==========================================
+
         const opcoes = dados
 
             .filter(opcao =>
@@ -103,14 +117,17 @@ export default async function handler(req, res) {
 
             }))
 
-            // Ordena do mais barato para o mais caro
             .sort((a, b) => {
 
                 const precoA =
-                    Number(a.preco.replace(",", "."));
+                    Number(
+                        a.preco.replace(",", ".")
+                    );
 
                 const precoB =
-                    Number(b.preco.replace(",", "."));
+                    Number(
+                        b.preco.replace(",", ".")
+                    );
 
                 return precoA - precoB;
 
@@ -134,10 +151,14 @@ export default async function handler(req, res) {
 
     } catch (erro) {
 
-        console.error(erro);
+        console.error(
+            "Erro:",
+            erro
+        );
 
         return res.status(500).json({
             erro:
+                erro.message ||
                 "Não foi possível calcular o frete."
         });
 
