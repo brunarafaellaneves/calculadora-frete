@@ -67,7 +67,7 @@ export default async function handler(req, res) {
                         weight: peso,
                         height: 8,
                         width: 8,
-                        length: 42
+                        length: 44
                     }
 
                 })
