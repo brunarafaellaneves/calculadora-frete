@@ -1,5 +1,8 @@
 export default async function handler(req, res) {
 
+    // Valor fixo adicionado ao frete mostrado ao cliente
+    const TAXA_FRETE = 1.50;
+
     if (req.method !== "POST") {
         return res.status(405).json({
             erro: "Método não permitido."
@@ -105,7 +108,8 @@ export default async function handler(req, res) {
 
                 nome: opcao.name,
 
-                preco: Number(opcao.price)
+                // Adiciona a taxa fixa ao valor do frete
+                preco: (Number(opcao.price) + TAXA_FRETE)
                     .toFixed(2)
                     .replace(".", ","),
 
