@@ -92,6 +92,10 @@ export default async function handler(req, res) {
         );
 
         const texto = await resposta.text();
+        console.log("=== RESPOSTA DA SUPERFRETE ===");
+        console.log("HTTP STATUS:", resposta.status);
+        console.log("RESPOSTA:", texto);
+        console.log("=== FIM RESPOSTA ===");
 
         let dados;
 
