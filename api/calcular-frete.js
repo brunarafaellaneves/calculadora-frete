@@ -26,7 +26,7 @@ export default async function handler(req, res) {
         }
 
         // Cada leque pesa aproximadamente 170g
-        const peso = quantidade * 0.17;
+        const peso = quantidade * 0.19;
 
         const resposta = await fetch(
             "https://api.superfrete.com/api/v0/calculator",
