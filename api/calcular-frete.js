@@ -1,8 +1,12 @@
 export default async function handler(req, res) {
 
+    const TAXA_FRETE = 1.50;
+    const PESO_POR_LEQUE = 0.170;
+
     if (req.method !== "POST") {
         return res.status(405).json({
-            erro: "Método não permitido."
+            erro: "Método não permitido.",
+            opcoes: []
         });
     }
 
@@ -12,7 +16,8 @@ export default async function handler(req, res) {
 
         if (!cepDestino || !quantidade) {
             return res.status(400).json({
-                erro: "CEP e quantidade são obrigatórios."
+                erro: "CEP e quantidade são obrigatórios.",
+                opcoes: []
             });
         }
 
@@ -24,7 +29,8 @@ export default async function handler(req, res) {
             quantidadeNumerica > 5
         ) {
             return res.status(400).json({
-                erro: "A quantidade deve ser entre 1 e 5 leques."
+                erro: "A quantidade deve ser entre 1 e 5 leques.",
+                opcoes: []
             });
         }
 
@@ -32,20 +38,27 @@ export default async function handler(req, res) {
 
         if (cep.length !== 8) {
             return res.status(400).json({
-                erro: "CEP inválido."
+                erro: "CEP inválido.",
+                opcoes: []
             });
         }
 
-        // 170g por leque
-        const peso = quantidadeNumerica * 0.170;
+        // ==========================================================
+        // PESO
+        // ==========================================================
 
-        console.log("=================================");
-        console.log("CEP:", cep);
-        console.log("Quantidade:", quantidadeNumerica);
-        console.log("Peso:", peso, "kg");
-        console.log("Peso:", peso * 1000, "g");
-        console.log("=================================");
+        const peso = quantidadeNumerica * PESO_POR_LEQUE;
 
+        console.log(
+            `Quantidade: ${quantidadeNumerica} | ` +
+            `Peso: ${peso} kg | ` +
+            `${peso * 1000} g`
+        );
+
+
+        // ==========================================================
+        // CALCULAR FRETE
+        // ==========================================================
 
         const resposta = await fetch(
             "https://api.superfrete.com/api/v0/calculator",
@@ -97,45 +110,152 @@ export default async function handler(req, res) {
         );
 
 
-        // ======================================================
-        // PEGAR RESPOSTA BRUTA
-        // ======================================================
+        // ==========================================================
+        // LER RESPOSTA
+        // ==========================================================
 
-        const respostaTexto = await resposta.text();
+        const texto = await resposta.text();
+
+        let dados;
+
+        try {
+            dados = JSON.parse(texto);
+        } catch (erro) {
+
+            console.error(
+                "SuperFrete retornou algo que não é JSON:",
+                texto
+            );
+
+            return res.status(502).json({
+                erro: "Erro na resposta da SuperFrete.",
+                opcoes: []
+            });
+        }
 
 
-        console.log("=================================");
-        console.log("STATUS SUPERFRETE:", resposta.status);
-        console.log("RESPOSTA SUPERFRETE:");
-        console.log(respostaTexto);
-        console.log("=================================");
+        // ==========================================================
+        // ERRO DA SUPERFRETE
+        // ==========================================================
+
+        if (!resposta.ok) {
+
+            console.error(
+                "Erro SuperFrete:",
+                dados
+            );
+
+            return res.status(resposta.status).json({
+                erro:
+                    dados.message ||
+                    dados.error ||
+                    dados.erro ||
+                    "Erro ao calcular frete.",
+                opcoes: []
+            });
+        }
 
 
-        // ======================================================
-        // RETORNAR RESPOSTA BRUTA
-        // ======================================================
+        // ==========================================================
+        // GARANTIR QUE A RESPOSTA É UMA LISTA
+        // ==========================================================
+
+        if (!Array.isArray(dados)) {
+
+            console.error(
+                "Resposta inesperada da SuperFrete:",
+                dados
+            );
+
+            return res.status(500).json({
+                erro: "Resposta inesperada da SuperFrete.",
+                opcoes: []
+            });
+        }
+
+
+        // ==========================================================
+        // FILTRAR E FORMATAR
+        // ==========================================================
+
+        const opcoes = dados
+            .filter(opcao =>
+                opcao &&
+                opcao.price &&
+                !opcao.has_error
+            )
+            .map(opcao => {
+
+                const preco =
+                    Number(opcao.price) + TAXA_FRETE;
+
+                return {
+                    nome: opcao.name || "",
+
+                    preco:
+                        preco
+                            .toFixed(2)
+                            .replace(".", ","),
+
+                    prazo:
+                        opcao.delivery_time || "",
+
+                    transportadora:
+                        opcao.company?.name || ""
+                };
+            })
+            .sort((a, b) => {
+
+                const precoA =
+                    Number(
+                        a.preco.replace(",", ".")
+                    );
+
+                const precoB =
+                    Number(
+                        b.preco.replace(",", ".")
+                    );
+
+                return precoA - precoB;
+            });
+
+
+        // ==========================================================
+        // NENHUMA OPÇÃO
+        // ==========================================================
+
+        if (opcoes.length === 0) {
+
+            return res.status(404).json({
+                erro:
+                    "Nenhuma opção de frete disponível para este CEP.",
+                opcoes: []
+            });
+        }
+
+
+        // ==========================================================
+        // RETORNO
+        // ==========================================================
 
         return res.status(200).json({
-
-            statusSuperFrete: resposta.status,
-
-            respostaSuperFrete: respostaTexto
-
+            opcoes: opcoes
         });
 
 
     } catch (erro) {
 
-        console.error("ERRO:", erro);
+        console.error(
+            "Erro no endpoint:",
+            erro
+        );
 
         return res.status(500).json({
-
             erro:
                 erro.message ||
-                "Erro desconhecido."
-
+                "Não foi possível calcular o frete.",
+            opcoes: []
         });
-
     }
 
 }
