@@ -4,10 +4,10 @@ export default async function handler(req, res) {
     // CONFIGURAÇÕES
     // ==========================================================
 
-    // Valor fixo adicionado ao frete mostrado ao cliente
+    // Taxa fixa adicionada ao frete mostrado no site
     const TAXA_FRETE = 1.50;
 
-    // Cada leque pesa 170g
+    // Peso de cada leque
     const PESO_POR_LEQUE = 0.170;
 
 
@@ -16,9 +16,11 @@ export default async function handler(req, res) {
     // ==========================================================
 
     if (req.method !== "POST") {
+
         return res.status(405).json({
             erro: "Método não permitido."
         });
+
     }
 
 
@@ -31,11 +33,11 @@ export default async function handler(req, res) {
         const {
             cepDestino,
             quantidade
-        } = req.body;
+        } = req.body || {};
 
 
         // ======================================================
-        // VALIDAR DADOS
+        // VALIDAR CEP E QUANTIDADE
         // ======================================================
 
         if (!cepDestino || !quantidade) {
@@ -47,8 +49,7 @@ export default async function handler(req, res) {
         }
 
 
-        const quantidadeNumerica =
-            Number(quantidade);
+        const quantidadeNumerica = Number(quantidade);
 
 
         if (
@@ -65,8 +66,33 @@ export default async function handler(req, res) {
 
 
         // ======================================================
+        // LIMPAR CEP
+        // ======================================================
+
+        const cep = String(cepDestino)
+            .replace(/\D/g, "");
+
+
+        if (cep.length !== 8) {
+
+            return res.status(400).json({
+                erro: "CEP inválido."
+            });
+
+        }
+
+
+        // ======================================================
         // CALCULAR PESO
         // ======================================================
+
+        /*
+            1 leque = 170g
+            2 leques = 340g
+            3 leques = 510g
+            4 leques = 680g
+            5 leques = 850g
+        */
 
         const peso =
             quantidadeNumerica * PESO_POR_LEQUE;
@@ -77,80 +103,20 @@ export default async function handler(req, res) {
 
 
         console.log(
-            "======================================"
-        );
-
-        console.log(
             "Quantidade:",
             quantidadeNumerica
         );
 
         console.log(
-            "Peso:",
+            "Peso enviado:",
             peso,
             "kg"
         );
 
         console.log(
-            "Peso:",
+            "Peso em gramas:",
             pesoEmGramas,
             "g"
-        );
-
-
-        // ======================================================
-        // SERVIÇOS
-        // ======================================================
-
-        /*
-            Mini Envios tem limite de 300g.
-
-            Portanto:
-
-            1 leque = 170g
-            -> Mini Envios permitido
-
-            2 leques = 340g
-            -> Mini Envios NÃO permitido
-
-            3 leques = 510g
-            -> Mini Envios NÃO permitido
-
-            4 leques = 680g
-            -> Mini Envios NÃO permitido
-
-            5 leques = 850g
-            -> Mini Envios NÃO permitido
-        */
-
-
-        let services;
-
-
-        if (pesoEmGramas <= 300) {
-
-            // Até 300g pode utilizar Mini Envios
-            services = "1,2,17,3,33,31";
-
-            console.log(
-                "Faixa de peso: até 300g"
-            );
-
-        } else {
-
-            // Acima de 300g NÃO solicitar Mini Envios
-            services = "1,2,3,33,31";
-
-            console.log(
-                "Faixa de peso: acima de 300g"
-            );
-
-        }
-
-
-        console.log(
-            "Serviços enviados:",
-            services
         );
 
 
@@ -182,36 +148,35 @@ export default async function handler(req, res) {
 
                 body: JSON.stringify({
 
-                    // ------------------------------------------------
+                    // ------------------------------------------
                     // ORIGEM
-                    // ------------------------------------------------
+                    // ------------------------------------------
 
                     from: {
                         postal_code: "53150170"
                     },
 
 
-                    // ------------------------------------------------
+                    // ------------------------------------------
                     // DESTINO
-                    // ------------------------------------------------
+                    // ------------------------------------------
 
                     to: {
-                        postal_code:
-                            String(cepDestino)
-                                .replace(/\D/g, "")
+                        postal_code: cep
                     },
 
 
-                    // ------------------------------------------------
+                    // ------------------------------------------
                     // SERVIÇOS
-                    // ------------------------------------------------
+                    // ------------------------------------------
 
-                    services: services,
+                    services:
+                        "1,2,17,3,33,31",
 
 
-                    // ------------------------------------------------
+                    // ------------------------------------------
                     // OPÇÕES
-                    // ------------------------------------------------
+                    // ------------------------------------------
 
                     options: {
 
@@ -226,9 +191,9 @@ export default async function handler(req, res) {
                     },
 
 
-                    // ------------------------------------------------
+                    // ------------------------------------------
                     // PACOTE
-                    // ------------------------------------------------
+                    // ------------------------------------------
 
                     package: {
 
@@ -249,15 +214,43 @@ export default async function handler(req, res) {
 
 
         // ======================================================
-        // LER RESPOSTA
+        // LER RESPOSTA COM SEGURANÇA
         // ======================================================
 
-        const dados =
-            await resposta.json();
+        const textoResposta =
+            await resposta.text();
+
+
+        let dados;
+
+
+        try {
+
+            dados =
+                JSON.parse(textoResposta);
+
+        } catch (erroJson) {
+
+            console.error(
+                "Resposta não-JSON da SuperFrete:",
+                textoResposta
+            );
+
+            return res.status(502).json({
+
+                erro:
+                    "A SuperFrete retornou uma resposta inválida.",
+
+                detalhe:
+                    textoResposta.substring(0, 500)
+
+            });
+
+        }
 
 
         // ======================================================
-        // TRATAR ERRO
+        // VERIFICAR ERRO DA SUPERFRETE
         // ======================================================
 
         if (!resposta.ok) {
@@ -274,6 +267,7 @@ export default async function handler(req, res) {
                 erro:
                     dados.message ||
                     dados.error ||
+                    dados.erro ||
                     JSON.stringify(dados)
 
             });
@@ -282,7 +276,7 @@ export default async function handler(req, res) {
 
 
         // ======================================================
-        // VALIDAR RESPOSTA
+        // VERIFICAR FORMATO DA RESPOSTA
         // ======================================================
 
         if (!Array.isArray(dados)) {
@@ -295,7 +289,10 @@ export default async function handler(req, res) {
             return res.status(500).json({
 
                 erro:
-                    "A resposta da SuperFrete não está no formato esperado."
+                    "A SuperFrete retornou um formato inesperado.",
+
+                detalhe:
+                    dados
 
             });
 
@@ -303,56 +300,36 @@ export default async function handler(req, res) {
 
 
         // ======================================================
-        // FILTRAR OPÇÕES
+        // FILTRAR E FORMATAR OPÇÕES
         // ======================================================
 
-        const opcoes =
-            dados
+        const opcoes = dados
 
-                .filter(opcao => {
+            .filter(opcao => {
 
-                    // Precisa ter preço
-                    if (!opcao.price) {
-                        return false;
-                    }
+                return (
+                    opcao &&
+                    opcao.price &&
+                    !opcao.has_error
+                );
 
-                    // Não pode ter erro
-                    if (opcao.has_error) {
-                        return false;
-                    }
-
-                    // Segurança:
-                    // se passou de 300g, não aceitar Mini Envios
-                    if (
-                        pesoEmGramas > 300 &&
-                        (
-                            opcao.name
-                                ?.toLowerCase()
-                                .includes("mini")
-                        )
-                    ) {
-
-                        return false;
-
-                    }
-
-                    return true;
-
-                })
+            })
 
 
-                // ==================================================
-                // FORMATAR
-                // ==================================================
+            .map(opcao => {
 
-                .map(opcao => ({
+                const preco =
+                    Number(opcao.price);
+
+
+                return {
 
                     nome:
                         opcao.name || "",
 
                     preco:
                         (
-                            Number(opcao.price) +
+                            preco +
                             TAXA_FRETE
                         )
                             .toFixed(2)
@@ -364,32 +341,28 @@ export default async function handler(req, res) {
                     transportadora:
                         opcao.company?.name || ""
 
-                }))
+                };
+
+            })
 
 
-                // ==================================================
-                // ORDENAR PELO MENOR PREÇO
-                // ==================================================
+            .sort((a, b) => {
 
-                .sort((a, b) => {
-
-                    const precoA =
-                        Number(
-                            a.preco
-                                .replace(",", ".")
-                        );
+                const precoA =
+                    Number(
+                        a.preco.replace(",", ".")
+                    );
 
 
-                    const precoB =
-                        Number(
-                            b.preco
-                                .replace(",", ".")
-                        );
+                const precoB =
+                    Number(
+                        b.preco.replace(",", ".")
+                    );
 
 
-                    return precoA - precoB;
+                return precoA - precoB;
 
-                });
+            });
 
 
         // ======================================================
@@ -401,7 +374,7 @@ export default async function handler(req, res) {
             return res.status(404).json({
 
                 erro:
-                    "Nenhuma opção de frete disponível para este CEP e peso."
+                    "Nenhuma opção de frete disponível para este CEP."
 
             });
 
@@ -409,7 +382,7 @@ export default async function handler(req, res) {
 
 
         // ======================================================
-        // RETORNO
+        // RETORNAR PARA O SITE
         // ======================================================
 
         return res.status(200).json({
@@ -422,7 +395,7 @@ export default async function handler(req, res) {
     } catch (erro) {
 
         console.error(
-            "Erro:",
+            "Erro no servidor:",
             erro
         );
 
