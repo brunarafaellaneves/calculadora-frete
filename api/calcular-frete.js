@@ -1,6 +1,9 @@
-
 export default async function handler(req, res) {
     const TAXA_FRETE = 1.50;
+
+    // --------------------------------
+    // MÉTODO
+    // --------------------------------
 
     if (req.method !== "POST") {
         return res.status(405).json({
@@ -12,22 +15,26 @@ export default async function handler(req, res) {
     try {
         const { cepDestino, quantidade } = req.body;
 
-        // -----------------------------
-        // VALIDAÇÃO
-        // -----------------------------
+        // --------------------------------
+        // VALIDAÇÃO DA QUANTIDADE
+        // --------------------------------
 
         const qtd = Number(quantidade);
-
-        if (!cepDestino) {
-            return res.status(400).json({
-                erro: "CEP de destino é obrigatório.",
-                opcoes: []
-            });
-        }
 
         if (!Number.isInteger(qtd) || qtd < 1 || qtd > 5) {
             return res.status(400).json({
                 erro: "A quantidade deve ser entre 1 e 5 leques.",
+                opcoes: []
+            });
+        }
+
+        // --------------------------------
+        // VALIDAÇÃO DO CEP
+        // --------------------------------
+
+        if (!cepDestino) {
+            return res.status(400).json({
+                erro: "CEP de destino é obrigatório.",
                 opcoes: []
             });
         }
@@ -41,42 +48,29 @@ export default async function handler(req, res) {
             });
         }
 
-        // -----------------------------
+        // --------------------------------
         // PESO
-        // -----------------------------
+        // --------------------------------
+        //
+        // 1 leque  = faixa de até 300g
+        // 2 a 5    = faixa de até 1kg
+        //
+        // A calculadora da SuperFrete trabalha
+        // com essas faixas de peso.
 
-        // Cada leque = 170 g
-        const peso = Number((qtd * 0.170).toFixed(3));
+        const peso = qtd === 1 ? 0.300 : 1.000;
 
-        // -----------------------------
-        // COTAÇÃO
-        // -----------------------------
+        // --------------------------------
+        // DIMENSÕES DA CAIXA
+        // --------------------------------
 
-        const payload = {
-            from: {
-                postal_code: "53150-170"
-            },
+        const altura = 8;
+        const largura = 8;
+        const comprimento = 44;
 
-            to: {
-                postal_code: cep
-            },
-
-            services: "1,2,17,3,31,33",
-
-            options: {
-                own_hand: false,
-                receipt: false,
-                insurance_value: 0,
-                use_insurance_value: false
-            },
-
-            package: {
-                weight: peso,
-                height: 8,
-                width: 8,
-                length: 44
-            }
-        };
+        // --------------------------------
+        // API SUPERFRETE
+        // --------------------------------
 
         const resposta = await fetch(
             "https://api.superfrete.com/api/v0/calculator",
@@ -84,22 +78,42 @@ export default async function handler(req, res) {
                 method: "POST",
 
                 headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
                     "Authorization":
-                        `Bearer ${process.env.SUPERFRETE_API_KEY}`,
-
-                    "User-Agent":
-                        "Wild Flower Store Frete (contato)",
-
-                    "Accept":
-                        "application/json",
-
-                    "Content-Type":
-                        "application/json"
+                        `Bearer ${process.env.SUPERFRETE_API_KEY}`
                 },
 
-                body: JSON.stringify(payload)
+                body: JSON.stringify({
+                    from: {
+                        postal_code: "53150-170"
+                    },
+
+                    to: {
+                        postal_code: cep
+                    },
+
+                    services: "1,2,17,3,31,33",
+
+                    options: {
+                        own_hand: false,
+                        receipt: false,
+                        insurance_value: 0
+                    },
+
+                    package: {
+                        weight: peso,
+                        height: altura,
+                        width: largura,
+                        length: comprimento
+                    }
+                })
             }
         );
+
+        // --------------------------------
+        // LER RESPOSTA
+        // --------------------------------
 
         const texto = await resposta.text();
 
@@ -107,69 +121,74 @@ export default async function handler(req, res) {
 
         try {
             dados = JSON.parse(texto);
-        } catch {
+        } catch (erro) {
             console.error(
                 "Resposta inválida da SuperFrete:",
                 texto
             );
 
             return res.status(502).json({
-                erro: "A SuperFrete retornou uma resposta inválida.",
+                erro:
+                    "A SuperFrete retornou uma resposta inválida.",
                 opcoes: []
             });
         }
 
-        // -----------------------------
-        // ERRO DA SUPERFRETE
-        // -----------------------------
+        // --------------------------------
+        // ERRO DA API
+        // --------------------------------
 
         if (!resposta.ok) {
             console.error(
-                "Erro SuperFrete:",
-                JSON.stringify(dados)
+                "Erro da SuperFrete:",
+                dados
             );
 
             return res.status(resposta.status).json({
                 erro:
                     dados?.message ||
                     dados?.error ||
-                    "Erro ao calcular o frete na SuperFrete.",
+                    "Erro ao calcular o frete.",
                 opcoes: []
             });
         }
 
-        // -----------------------------
-        // NORMALIZA RESPOSTA
-        // -----------------------------
+        // --------------------------------
+        // LOCALIZAR SERVIÇOS
+        // --------------------------------
 
-        const servicos = Array.isArray(dados)
-            ? dados
-            : Array.isArray(dados?.services)
-                ? dados.services
-                : Array.isArray(dados?.data)
-                    ? dados.data
-                    : [];
+        const servicos =
+            Array.isArray(dados)
+                ? dados
+                : Array.isArray(dados?.services)
+                    ? dados.services
+                    : Array.isArray(dados?.data)
+                        ? dados.data
+                        : [];
 
         if (servicos.length === 0) {
             console.error(
-                "Resposta sem serviços:",
-                JSON.stringify(dados)
+                "Nenhum serviço retornado:",
+                dados
             );
 
             return res.status(404).json({
                 erro:
-                    "Nenhuma opção de frete encontrada para este CEP.",
+                    "Nenhuma opção de frete disponível para este CEP.",
                 opcoes: []
             });
         }
 
-        // -----------------------------
-        // TRANSFORMA PREÇOS
-        // -----------------------------
+        // --------------------------------
+        // TRANSFORMAR RESULTADOS
+        // --------------------------------
 
         const opcoes = servicos
             .filter(servico => {
-                if (!servico) return false;
+
+                if (!servico) {
+                    return false;
+                }
 
                 if (
                     servico.has_error === true ||
@@ -188,16 +207,17 @@ export default async function handler(req, res) {
                     preco !== null
                 );
             })
+
             .map(servico => {
 
-                const precoBase = Number(
+                const precoSuperFrete = Number(
                     servico.price ??
                     servico.total_with_discount ??
                     servico.total
                 );
 
                 const precoFinal =
-                    precoBase + TAXA_FRETE;
+                    precoSuperFrete + TAXA_FRETE;
 
                 return {
                     nome:
@@ -216,11 +236,6 @@ export default async function handler(req, res) {
                             .toFixed(2)
                             .replace(".", ","),
 
-                    precoSuperFrete:
-                        precoBase
-                            .toFixed(2)
-                            .replace(".", ","),
-
                     codigo:
                         servico.code ??
                         servico.id ??
@@ -232,7 +247,13 @@ export default async function handler(req, res) {
                         ""
                 };
             })
+
+            // --------------------------------
+            // ORDENAR DO MAIS BARATO AO MAIS CARO
+            // --------------------------------
+
             .sort((a, b) => {
+
                 const valorA = Number(
                     a.preco.replace(",", ".")
                 );
@@ -244,17 +265,21 @@ export default async function handler(req, res) {
                 return valorA - valorB;
             });
 
+        // --------------------------------
+        // NENHUM FRETE
+        // --------------------------------
+
         if (opcoes.length === 0) {
             return res.status(404).json({
                 erro:
-                    "Nenhuma opção de frete disponível.",
+                    "Nenhuma opção de frete disponível para este CEP.",
                 opcoes: []
             });
         }
 
-        // -----------------------------
-        // RESPOSTA PARA O SITE
-        // -----------------------------
+        // --------------------------------
+        // RESPOSTA
+        // --------------------------------
 
         return res.status(200).json({
             opcoes
@@ -263,7 +288,7 @@ export default async function handler(req, res) {
     } catch (erro) {
 
         console.error(
-            "Erro interno:",
+            "Erro ao calcular frete:",
             erro
         );
 
