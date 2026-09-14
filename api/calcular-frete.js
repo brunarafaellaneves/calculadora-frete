@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-    const TAXA_FRETE = 1.50;
+    const TAXA_FRETE = 0;
 
     if (req.method !== "POST") {
         return res.status(405).json({
